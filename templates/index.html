@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Document Summarizer</title>
+  <style>
+    /* RESET */
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{
+      font-family:"Inter",sans-serif;
+      background:linear-gradient(135deg,#141e30,#243b55);
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+      color:#fff;
+      overflow:hidden;
+    }
+    header{
+      background:rgba(255,255,255,0.08);
+      backdrop-filter:blur(15px);
+      padding:18px;
+      text-align:center;
+      font-size:24px;
+      font-weight:600;
+      border-bottom:1px solid rgba(255,255,255,0.15);
+      box-shadow:0 4px 15px rgba(0,0,0,0.4);
+      letter-spacing:1px;
+    }
+    .container{
+      display:flex;
+      flex:1;
+      padding:20px;
+      gap:20px;
+      overflow:hidden;
+    }
+    /* GLASS CARD */
+    .glass-card{
+      background:rgba(255,255,255,0.08);
+      backdrop-filter:blur(18px) saturate(160%);
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,0.25);
+      box-shadow:0 8px 25px rgba(0,0,0,0.5);
+      transition:all 0.3s ease;
+    }
+    .glass-card:hover{
+      transform:translateY(-5px);
+      box-shadow:0 15px 35px rgba(0,0,0,0.7);
+    }
+    /* SIDEBAR */
+    .sidebar{flex:1;padding:20px;overflow-y:auto;}
+    .sidebar h3{margin-bottom:20px;font-size:18px;}
+    .upload-grid{
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      gap:15px;
+    }
+    .upload-card{
+      background:rgba(255,255,255,0.12);
+      border:1px solid rgba(255,255,255,0.25);
+      border-radius:14px;
+      padding:20px;
+      text-align:center;
+      cursor:pointer;
+      font-size:15px;
+      transition:0.3s;
+      position:relative;
+      overflow:hidden;
+    }
+    .upload-card::after{
+      content:"";
+      position:absolute;
+      top:0;left:-100%;
+      width:100%;height:100%;
+      background:linear-gradient(120deg,transparent,rgba(255,255,255,0.3),transparent);
+      transition:0.5s;
+    }
+    .upload-card:hover::after{left:100%;}
+    .upload-card:hover{
+      background:rgba(255,255,255,0.25);
+      transform:scale(1.05);
+    }
+
+    /* INPUT BOXES */
+    .input-box {
+      margin-top: 15px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .input-box input, .input-box textarea {
+      padding: 10px;
+      border-radius: 10px;
+      border: none;
+      width: 100%;
+    }
+    .btn {
+      background: linear-gradient(135deg, #43e97b, #38f9d7);
+      border: none;
+      padding: 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .btn:hover {
+      box-shadow: 0 0 10px rgba(72,255,200,0.8);
+    }
+
+    /* WORKSPACE */
+    .workspace{flex:2;display:flex;flex-direction:column;gap:20px;overflow-y:auto;}
+    .summary-panel,.chat-panel{padding:20px;}
+    .summary-tabs{
+      display:flex;
+      gap:12px;
+      margin-bottom:12px;
+    }
+    .summary-tabs button{
+      flex:1;
+      padding:10px;
+      border:none;
+      border-radius:10px;
+      background:linear-gradient(135deg,#6a11cb,#2575fc);
+      color:#fff;font-weight:500;cursor:pointer;
+      transition:0.3s;
+    }
+    .summary-tabs button:hover{
+      background:linear-gradient(135deg,#2575fc,#6a11cb);
+      box-shadow:0 0 12px rgba(90,160,255,0.9);
+    }
+    #summaryBox{
+      min-height:100px;
+      padding:12px;
+      border-radius:10px;
+      background:rgba(255,255,255,0.1);
+      border:1px solid rgba(255,255,255,0.25);
+      line-height:1.5;
+    }
+    /* CHAT */
+    .chat-box{
+      border:1px solid rgba(255,255,255,0.25);
+      border-radius:12px;
+      padding:12px;
+      min-height:180px;
+      margin-bottom:12px;
+      overflow-y:auto;
+      max-height:250px;
+      background:rgba(255,255,255,0.08);
+    }
+    .bubble{
+      padding:10px 14px;
+      margin:6px 0;
+      border-radius:15px;
+      max-width:80%;
+      line-height:1.4;
+      animation:fadeIn 0.3s ease;
+    }
+    .user{background:#4a6eff;align-self:flex-end;margin-left:auto;}
+    .ai{background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+    .chat-input{display:flex;gap:10px;}
+    .chat-input input{
+      flex:1;
+      padding:12px;
+      border-radius:10px;
+      border:none;outline:none;
+      background:rgba(255,255,255,0.15);
+      color:#fff;
+    }
+    .chat-input button{
+      background:linear-gradient(135deg,#43e97b,#38f9d7);
+      color:#000;border:none;
+      padding:12px 18px;border-radius:10px;
+      cursor:pointer;font-weight:600;transition:0.3s;
+    }
+    .chat-input button:hover{
+      background:linear-gradient(135deg,#38f9d7,#43e97b);
+      box-shadow:0 0 12px rgba(72,255,200,0.8);
+    }
+    /* SUGGESTED */
+    .suggested{margin-top:15px;}
+    .suggested h4{margin-bottom:10px;}
+    .suggested button{
+      width:100%;
+      background:rgba(255,255,255,0.15);
+      border:1px solid rgba(255,255,255,0.3);
+      border-radius:10px;
+      padding:10px;margin-bottom:8px;
+      cursor:pointer;text-align:left;color:#fff;
+      transition:0.3s;
+    }
+    .suggested button:hover{
+      background:rgba(255,255,255,0.35);
+      box-shadow:0 0 10px rgba(255,255,255,0.6);
+    }
+  </style>
+</head>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Document Summarizer</title>
+  <style>
+    /* --- same CSS as before --- */
+  </style>
+</head>
+<body>
+  <header>🚀 AI Document Summarizer & Q&A Assistant</header>
+  <div class="container">
+    <!-- Sidebar -->
+    <div class="sidebar glass-card">
+      <h3>📂 Upload Document</h3>
+      <div class="upload-grid">
+        <div class="upload-card" onclick="showInput('pdfBox')">📄 PDF</div>
+        <div class="upload-card" onclick="showInput('wordBox')">📝 Word Doc</div>
+        <div class="upload-card" onclick="showInput('imgBox')">🖼 Image</div>
+        <div class="upload-card" onclick="showInput('urlBox')">🌐 URL</div>
+        <div class="upload-card" onclick="showInput('textBox')">✍️ Paste Text</div>
+      </div>
+
+      <!-- Hidden Input Boxes -->
+      <div id="pdfBox" class="input-box">
+        <input type="file" id="pdfInput" accept=".pdf">
+        <button class="btn" onclick="uploadFile('pdf')">Summarize</button>
+      </div>
+      <div id="wordBox" class="input-box">
+        <input type="file" id="wordInput" accept=".docx">
+        <button class="btn" onclick="uploadFile('word')">Summarize</button>
+      </div>
+      <div id="imgBox" class="input-box">
+        <input type="file" id="imgInput" accept="image/*">
+        <button class="btn" onclick="uploadFile('image')">Summarize</button>
+      </div>
+      <div id="urlBox" class="input-box">
+        <input type="text" id="urlInput" placeholder="Enter website URL">
+        <button class="btn" onclick="summarize('url')">Summarize</button>
+      </div>
+      <div id="textBox" class="input-box">
+        <textarea rows="4" id="textInput" placeholder="Paste your text here"></textarea>
+        <button class="btn" onclick="summarize('text')">Summarize</button>
+      </div>
+    </div>
+
+    <!-- Workspace -->
+    <div class="workspace">
+      <div class="summary-panel glass-card">
+        <h3>📑 Summary</h3>
+        <div class="summary-tabs">
+          <button onclick="getSummary('short')">Short</button>
+          <button onclick="getSummary('detailed')">Detailed</button>
+          <button onclick="getSummary('bullet')">Bullet Points</button>
+        </div>
+        <div id="summaryBox">✨ Upload a document to generate a summary...</div>
+      </div>
+      <div class="chat-panel glass-card">
+        <h3>💬 Q&A Chat</h3>
+        <div class="chat-box" id="chatBox">
+          <div class="bubble ai"><b>AI:</b> Hello! Upload a document and ask me questions about it.</div>
+        </div>
+        <div class="chat-input">
+          <input type="text" id="questionInput" placeholder="Type your question...">
+          <button onclick="askQuestion()">Ask</button>
+        </div>
+        <div class="suggested" id="suggestions">
+          <h4>💡 Suggested Questions</h4>
+          <button onclick="autoAsk('What are the key points?')">What are the key points?</button>
+          <button onclick="autoAsk('Can you summarize this?')">Can you summarize this?</button>
+          <button onclick="autoAsk('Who are the main entities?')">Who are the main entities?</button>
+          <button onclick="autoAsk('What is the conclusion?')">What is the conclusion?</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "http://127.0.0.1:5000";
+
+    // Show the correct input box
+    function showInput(id) {
+      document.querySelectorAll('.input-box').forEach(el => el.style.display = "none");
+      document.getElementById(id).style.display = "flex";
+    }
+
+    // Handle file upload
+    function uploadFile(type) {
+      let input;
+      if (type === "pdf") input = document.getElementById("pdfInput");
+      if (type === "word") input = document.getElementById("wordInput");
+      if (type === "image") input = document.getElementById("imgInput");
+
+      if (!input.files.length) {
+        alert("⚠️ Please select a file first!");
+        return;
+      }
+
+      let formData = new FormData();
+      formData.append("file", input.files[0]);
+
+      let box = document.getElementById("summaryBox");
+      box.innerHTML = "🔎 Uploading & Summarizing...";
+
+      fetch(`${API_BASE}/upload`, {
+        method: "POST",
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        box.innerHTML = data.summary;
+      })
+      .catch(err => {
+        console.error(err);
+        box.innerHTML = "⚠️ Error connecting to backend.";
+      });
+    }
+
+    // Summarize pasted text or URL
+    function summarize(source) {
+      let text = "";
+      let box = document.getElementById("summaryBox");
+
+      if (source === "text") {
+        text = document.querySelector("#textInput").value;
+        if (!text.trim()) {
+          alert("⚠️ Please paste some text first!");
+          return;
+        }
+        box.innerHTML = "🔎 Summarizing text...";
+        fetch(`${API_BASE}/summarize`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: text })
+        })
+        .then(res => res.json())
+        .then(data => box.innerHTML = data.summary)
+        .catch(err => box.innerHTML = "⚠️ Error summarizing.");
+      }
+
+      if (source === "url") {
+        let url = document.querySelector("#urlInput").value;
+        if (!url.trim()) {
+          alert("⚠️ Please enter a URL!");
+          return;
+        }
+        box.innerHTML = "🔎 Fetching URL...";
+        fetch(`${API_BASE}/url`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: url })
+        })
+        .then(res => res.json())
+        .then(data => box.innerHTML = data.summary)
+        .catch(err => box.innerHTML = "⚠️ Error fetching URL.");
+      }
+    }
+
+    // Tabs to get summary style
+    function getSummary(type) {
+      let box = document.getElementById("summaryBox");
+      box.innerHTML = "🔄 Generating " + type + " summary...";
+
+      fetch(`${API_BASE}/summarize?mode=` + type)
+        .then(res => res.json())
+        .then(data => {
+          box.innerHTML = data.summary;
+        })
+        .catch(err => {
+          box.innerHTML = "⚠️ Error generating summary.";
+          console.error(err);
+        });
+    }
+
+    // Chat functions
+    function askQuestion(){
+      let q=document.getElementById("questionInput").value;
+      if(!q) return;
+      let chat=document.getElementById("chatBox");
+      chat.innerHTML+=`<div class="bubble user"><b>You:</b> ${q}</div>`;
+      chat.innerHTML+=`<div class="bubble ai"><b>AI:</b> Thinking...</div>`;
+      chat.scrollTop=chat.scrollHeight;
+
+      fetch(`${API_BASE}/ask`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q })
+      })
+      .then(res => res.json())
+      .then(data => {
+        chat.innerHTML+=`<div class="bubble ai"><b>AI:</b> ${data.answer}</div>`;
+        chat.scrollTop=chat.scrollHeight;
+      })
+      .catch(err => {
+        chat.innerHTML+=`<div class="bubble ai"><b>AI:</b> ⚠️ Error connecting to backend</div>`;
+      });
+
+      document.getElementById("questionInput").value="";
+    }
+
+    function autoAsk(q){
+      document.getElementById("questionInput").value=q;
+      askQuestion();
+    }
+  </script>
+</body>
+</html>

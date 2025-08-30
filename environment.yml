@@ -1,0 +1,9 @@
+name: summarization_env
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - flask
+  - pip
+  - pip:
+      - gunicorn

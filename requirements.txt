@@ -1,0 +1,15 @@
+flask
+gunicorn
+pymupdf
+python-docx
+pytesseract
+pillow
+requests
+beautifulsoup4
+openai
+python-dotenv
+numpy
+tqdm
+nltk
+transformers
+
